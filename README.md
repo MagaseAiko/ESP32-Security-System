@@ -33,20 +33,3 @@ Para o desenvolvimento deste projeto, serão aplicados os seguintes tópicos:
 - **Computação Móvel e Integração com Dispositivos**: O aplicativo será desenvolvido para dispositivos móveis (Android e iOS) usando React Native ou Flutter.
 
 ## Como Executar
-
-1. **Configuração do ESP32**:
-    - Conecte o ESP32 à sua rede Wi-Fi.
-    - Utilize a IDE Arduino para programar o ESP32 com o código de captura e envio das imagens via MQTT.
-
-2. **Desenvolvimento do Aplicativo**:
-    - Clone este repositório.
-    - Instale as dependências utilizando **React Native** ou **Flutter**.
-    - Conecte o aplicativo ao ESP32 para exibir as imagens em tempo real.
-
-## Contribuição
-
-Sinta-se à vontade para contribuir para este projeto! Se encontrar algum bug ou quiser adicionar novos recursos, abra uma issue ou envie um pull request.
-
-## Licença
-
-Este projeto está licenciado sob a Licença MIT.
