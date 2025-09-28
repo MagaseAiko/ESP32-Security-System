@@ -113,13 +113,12 @@ void loop() {
 
  if(!StreamSizeBool)
  {
-  set_camera_resolution_simple(FRAMESIZE_SVGA);
+  set_camera_resolution_simple(FRAMESIZE_VGA);
   StreamSizeBool = true;
  }
  
 }
 
-// Função simplificada para alterar XCLK
 bool set_camera_xclk_simple(uint32_t xclk_freq_mhz) {
     sensor_t *s = esp_camera_sensor_get();
     if (s == NULL) {
@@ -139,7 +138,6 @@ bool set_camera_xclk_simple(uint32_t xclk_freq_mhz) {
     return true;
 }
 
-// Função para alterar a resolução da transmissão
 bool set_camera_resolution_simple(framesize_t resolution) {
     sensor_t *s = esp_camera_sensor_get();
     if (s == NULL) {
@@ -147,7 +145,6 @@ bool set_camera_resolution_simple(framesize_t resolution) {
         return false;
     }
     
-    // Verificar se o formato é JPEG (necessário para framesize)
     if (s->pixformat != PIXFORMAT_JPEG) {
         log_e("Formato de pixel não é JPEG, não é possível alterar resolução");
         return false;

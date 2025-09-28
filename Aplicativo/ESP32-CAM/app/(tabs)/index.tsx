@@ -1,33 +1,47 @@
 import React, { useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, Dimensions } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, Dimensions, Linking } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useESP32 } from '@/contexts/ESP32Context';
 import { VideoStream } from '@/components/VideoStream';
 import { CameraCapture } from '@/components/CameraCapture';
+import { NgrokInfo } from '@/components/NgrokInfo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function HomeScreen() {
-  const { esp32Url, setEsp32Url, isConnected, setIsConnected } = useESP32();
+  const { esp32Url, setEsp32Url, isConnected, setIsConnected, isNgrokUrl } = useESP32();
   const [inputUrl, setInputUrl] = useState(esp32Url);
   const [isConnecting, setIsConnecting] = useState(false);
 
   const testConnection = async () => {
     if (!inputUrl.trim()) {
-      Alert.alert('Erro', 'Digite o endereço IP do ESP32-CAM');
+      Alert.alert('Erro', 'Digite o endereço IP ou URL do Ngrok do ESP32-CAM');
       return;
     }
 
     try {
       setIsConnecting(true);
       
-      // Testar conexão com o endpoint de status
-      const testUrl = `http://${inputUrl}/status`;
+      // Detectar se é URL do Ngrok
+      const isNgrok = inputUrl.includes('ngrok') || inputUrl.startsWith('https://');
+      
+      // Construir URL de teste baseada no tipo
+      let testUrl: string;
+      if (isNgrok) {
+        // Para Ngrok, usar a URL completa com /status
+        testUrl = inputUrl.startsWith('https://') 
+          ? `${inputUrl}/status` 
+          : `https://${inputUrl}/status`;
+      } else {
+        // Para IP local, usar HTTP com porta padrão
+        testUrl = `http://${inputUrl}/status`;
+      }
+      
       const response = await fetch(testUrl, { 
         method: 'GET',
-        timeout: 5000 
+        timeout: 10000 // Aumentar timeout para Ngrok
       });
       
       if (response.ok) {
@@ -35,11 +49,37 @@ export default function HomeScreen() {
         setIsConnected(true);
         Alert.alert('Sucesso', 'Conectado ao ESP32-CAM!');
       } else {
-        throw new Error(`Erro HTTP: ${response.status}`);
+        // Verificar se é a página de confirmação do Ngrok gratuito
+        if (response.status === 403 && isNgrok) {
+          Alert.alert(
+            'Confirmação do Ngrok', 
+            'Acesse o link no navegador para confirmar o acesso e depois tente novamente.',
+            [
+              { text: 'OK' },
+              { 
+                text: 'Abrir Link', 
+                onPress: async () => {
+                  try {
+                    const urlToOpen = inputUrl.startsWith('https://') ? inputUrl : `https://${inputUrl}`;
+                    await Linking.openURL(urlToOpen);
+                  } catch (error) {
+                    console.error('Erro ao abrir link:', error);
+                    Alert.alert('Erro', 'Não foi possível abrir o link no navegador');
+                  }
+                }
+              }
+            ]
+          );
+        } else {
+          throw new Error(`Erro HTTP: ${response.status}`);
+        }
       }
     } catch (error) {
       console.error('Erro de conexão:', error);
-      Alert.alert('Erro', 'Não foi possível conectar ao ESP32-CAM. Verifique o endereço IP e a rede.');
+      const errorMessage = inputUrl.includes('ngrok') 
+        ? 'Não foi possível conectar via Ngrok. Verifique se o túnel está ativo e tente novamente.'
+        : 'Não foi possível conectar ao ESP32-CAM. Verifique o endereço IP e a rede.';
+      Alert.alert('Erro', errorMessage);
       setIsConnected(false);
     } finally {
       setIsConnecting(false);
@@ -68,16 +108,25 @@ export default function HomeScreen() {
         </ThemedText>
         
         <ThemedView style={styles.inputContainer}>
-          <ThemedText style={styles.inputLabel}>Endereço IP do ESP32-CAM:</ThemedText>
+          <ThemedText style={styles.inputLabel}>
+            {isNgrokUrl ? 'URL do Ngrok:' : 'Endereço IP do ESP32-CAM:'}
+          </ThemedText>
           <TextInput
             style={styles.textInput}
             value={inputUrl}
             onChangeText={setInputUrl}
-            placeholder="192.168.15.200"
+            placeholder={isNgrokUrl ? "https://78e83deb645c.ngrok-free.app" : "192.168.15.200"}
             placeholderTextColor="#999"
-            keyboardType="numeric"
+            keyboardType={isNgrokUrl ? "url" : "numeric"}
             editable={!isConnected}
+            autoCapitalize="none"
+            autoCorrect={false}
           />
+          {isNgrokUrl && (
+            <ThemedText style={styles.helpText}>
+              Cole aqui a URL completa do Ngrok (ex: https://78e83deb645c.ngrok-free.app)
+            </ThemedText>
+          )}
         </ThemedView>
 
         <ThemedView style={styles.buttonContainer}>
@@ -107,11 +156,15 @@ export default function HomeScreen() {
           <ThemedView style={styles.statusContainer}>
             <IconSymbol name="checkmark.circle.fill" size={20} color="#4CAF50" />
             <ThemedText style={styles.statusText}>
-              Conectado: {esp32Url}
+              {isNgrokUrl ? 'Conectado via Ngrok:' : 'Conectado:'} {esp32Url}
             </ThemedText>
           </ThemedView>
         )}
       </ThemedView>
+
+      {isConnected && isNgrokUrl && (
+        <NgrokInfo isVisible={true} ngrokUrl={esp32Url} />
+      )}
 
       {isConnected && (
         <ThemedView style={styles.cameraSection}>
@@ -225,6 +278,12 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
     fontSize: 14,
     fontWeight: '500',
+  },
+  helpText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   cameraSection: {
     margin: 16,

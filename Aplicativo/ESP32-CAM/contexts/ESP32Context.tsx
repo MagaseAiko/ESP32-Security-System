@@ -10,6 +10,8 @@ interface ESP32ContextType {
   captureUrl: string;
   statusUrl: string;
   controlUrl: string;
+  isNgrokUrl: boolean;
+  baseUrl: string;
 }
 
 const ESP32Context = createContext<ESP32ContextType | undefined>(undefined);
@@ -22,11 +24,41 @@ export function ESP32Provider({ children }: ESP32ProviderProps) {
   const [esp32Url, setEsp32UrlState] = useState<string>('192.168.15.200');
   const [isConnected, setIsConnected] = useState<boolean>(false);
 
+  // Função para detectar se é uma URL do Ngrok
+  const isNgrokUrl = (url: string): boolean => {
+    return url.includes('ngrok') || (url.startsWith('https://') && !url.includes('192.168.') && !url.includes('10.') && !url.includes('172.'));
+  };
+
+  // Função para normalizar a URL base
+  const normalizeUrl = (url: string): string => {
+    // Se for uma URL completa do Ngrok, usar como está
+    if (isNgrokUrl(url)) {
+      // Remover protocolo se presente para normalizar
+      return url.replace(/^https?:\/\//, '');
+    }
+    // Se for apenas IP, adicionar protocolo HTTP
+    return url;
+  };
+
+  // Detectar se a URL atual é do Ngrok
+  const isNgrok = isNgrokUrl(esp32Url);
+  
+  // URL base normalizada
+  const baseUrl = normalizeUrl(esp32Url);
+
   // URLs derivadas da URL base
-  const streamUrl = `http://${esp32Url}:81/stream`;
-  const captureUrl = `http://${esp32Url}/capture`;
-  const statusUrl = `http://${esp32Url}/status`;
-  const controlUrl = `http://${esp32Url}/control`;
+  const streamUrl = isNgrok 
+    ? `https://${baseUrl}/stream`
+    : `http://${baseUrl}:81/stream`;
+  const captureUrl = isNgrok 
+    ? `https://${baseUrl}/capture`
+    : `http://${baseUrl}/capture`;
+  const statusUrl = isNgrok 
+    ? `https://${baseUrl}/status`
+    : `http://${baseUrl}/status`;
+  const controlUrl = isNgrok 
+    ? `https://${baseUrl}/control`
+    : `http://${baseUrl}/control`;
 
   const setEsp32Url = async (url: string) => {
     setEsp32UrlState(url);
@@ -59,6 +91,8 @@ export function ESP32Provider({ children }: ESP32ProviderProps) {
         captureUrl,
         statusUrl,
         controlUrl,
+        isNgrokUrl: isNgrok,
+        baseUrl,
       }}
     >
       {children}
