@@ -6,7 +6,8 @@
 const char *ssid = "VIVOFIBRA-4861";
 const char *password = "NozhVgaS7q";
 
-boolean teste = false;
+boolean ClockBool = false;
+boolean StreamSizeBool = false;
 
 void startCameraServer();
 void setupLedFlash();
@@ -104,10 +105,16 @@ if (config.pixel_format == PIXFORMAT_JPEG) {
 void loop() {
   delay(10000);
 
-  if(!teste)
+  if(!ClockBool)
  {
   set_camera_xclk_simple(40);
-  teste = true;
+  ClockBool = true;
+ }
+
+ if(!StreamSizeBool)
+ {
+  set_camera_resolution_simple(FRAMESIZE_SVGA);
+  StreamSizeBool = true;
  }
  
 }
@@ -129,5 +136,38 @@ bool set_camera_xclk_simple(uint32_t xclk_freq_mhz) {
     }
     
     log_i("XCLK alterado com sucesso para %u MHz", xclk_freq_mhz);
+    return true;
+}
+
+// Função para alterar a resolução da transmissão
+bool set_camera_resolution_simple(framesize_t resolution) {
+    sensor_t *s = esp_camera_sensor_get();
+    if (s == NULL) {
+        log_e("Sensor não inicializado");
+        return false;
+    }
+    
+    // Verificar se o formato é JPEG (necessário para framesize)
+    if (s->pixformat != PIXFORMAT_JPEG) {
+        log_e("Formato de pixel não é JPEG, não é possível alterar resolução");
+        return false;
+    }
+    
+    const char* resolution_names[] = {
+        "QQVGA", "QCIF", "QVGA", "CIF", "VGA", "SVGA", 
+        "XGA", "SXGA", "UXGA", "QXGA", "QSXGA"
+    };
+    
+    const char* res_name = (resolution <= FRAMESIZE_QSXGA) ? resolution_names[resolution] : "UNKNOWN";
+    
+    log_i("Alterando resolução para: %s (%d)", res_name, resolution);
+    
+    int res = s->set_framesize(s, resolution);
+    if (res != 0) {
+        log_e("Falha ao alterar resolução: %d", res);
+        return false;
+    }
+    
+    log_i("Resolução alterada com sucesso para: %s", res_name);
     return true;
 }
