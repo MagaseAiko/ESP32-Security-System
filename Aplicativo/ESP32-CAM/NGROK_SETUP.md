@@ -87,3 +87,4 @@ Copie a URL `https://78e83deb645c.ngrok-free.app` (a parte antes da seta).
 - Para uso em produção, considere a versão paga do Ngrok
 - Nunca compartilhe URLs do Ngrok publicamente
 - URLs do Ngrok são temporárias e mudam frequentemente
+

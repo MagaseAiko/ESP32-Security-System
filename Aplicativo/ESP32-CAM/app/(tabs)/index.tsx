@@ -25,7 +25,8 @@ export default function HomeScreen() {
       setIsConnecting(true);
       
       // Detectar se é URL do Ngrok
-      const isNgrok = inputUrl.includes('ngrok') || inputUrl.startsWith('https://');
+      const isNgrok = inputUrl.includes('ngrok') || 
+                     (inputUrl.startsWith('https://') && !inputUrl.includes('192.168.') && !inputUrl.includes('10.') && !inputUrl.includes('172.'));
       
       // Construir URL de teste baseada no tipo
       let testUrl: string;
@@ -39,10 +40,14 @@ export default function HomeScreen() {
         testUrl = `http://${inputUrl}/status`;
       }
       
+      console.log('Testando conexão:', testUrl);
+      
       const response = await fetch(testUrl, { 
         method: 'GET',
-        timeout: 10000 // Aumentar timeout para Ngrok
+        timeout: 10000
       });
+      
+      console.log('Resposta recebida:', response.status, response.statusText);
       
       if (response.ok) {
         await setEsp32Url(inputUrl);
@@ -61,6 +66,7 @@ export default function HomeScreen() {
                 onPress: async () => {
                   try {
                     const urlToOpen = inputUrl.startsWith('https://') ? inputUrl : `https://${inputUrl}`;
+                    console.log('Abrindo URL:', urlToOpen);
                     await Linking.openURL(urlToOpen);
                   } catch (error) {
                     console.error('Erro ao abrir link:', error);
@@ -71,7 +77,9 @@ export default function HomeScreen() {
             ]
           );
         } else {
-          throw new Error(`Erro HTTP: ${response.status}`);
+          const errorText = await response.text().catch(() => 'Erro desconhecido');
+          console.error('Erro HTTP:', response.status, errorText);
+          throw new Error(`Erro HTTP: ${response.status} - ${errorText}`);
         }
       }
     } catch (error) {
@@ -117,10 +125,11 @@ export default function HomeScreen() {
             onChangeText={setInputUrl}
             placeholder={isNgrokUrl ? "https://78e83deb645c.ngrok-free.app" : "192.168.15.200"}
             placeholderTextColor="#999"
-            keyboardType={isNgrokUrl ? "url" : "numeric"}
+            keyboardType="default"
             editable={!isConnected}
             autoCapitalize="none"
             autoCorrect={false}
+            autoComplete="off"
           />
           {isNgrokUrl && (
             <ThemedText style={styles.helpText}>
