@@ -7,6 +7,10 @@
 #include "sdkconfig.h"
 #include "camera_index.h"
 #include "board_config.h"
+#include "wifi_manager.h"
+
+// Declaração externa do gerenciador WiFi
+extern WiFiManager wifiManager;
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
@@ -656,6 +660,50 @@ static esp_err_t index_handler(httpd_req_t *req) {
   return httpd_resp_send(req, (const char *)index_ov2640_html_gz, index_ov2640_html_gz_len);
 }
 
+static esp_err_t wifi_reset_handler(httpd_req_t *req) {
+  log_i("WiFi reset requested via HTTP");
+  
+  // Resetar WiFi
+  wifiManager.resetWiFi();
+  
+  // Resposta de confirmação
+  String response = "<!DOCTYPE html>";
+  response += "<html>";
+  response += "<head>";
+  response += "<meta charset=\"UTF-8\">";
+  response += "<title>WiFi Resetado - ESP32-CAM</title>";
+  response += "<style>";
+  response += "body { font-family: Arial, sans-serif; max-width: 400px; margin: 50px auto; padding: 20px; background-color: #f5f5f5; }";
+  response += ".container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; }";
+  response += ".success { color: #28a745; font-size: 48px; margin-bottom: 20px; }";
+  response += "h1 { color: #333; margin-bottom: 20px; }";
+  response += ".info { background-color: #d4edda; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #28a745; }";
+  response += "</style>";
+  response += "</head>";
+  response += "<body>";
+  response += "<div class=\"container\">";
+  response += "<div class=\"success\">🔄</div>";
+  response += "<h1>WiFi Resetado!</h1>";
+  response += "<div class=\"info\">";
+  response += "<strong>Reiniciando...</strong><br>";
+  response += "O ESP32-CAM será reiniciado e entrará no modo de configuração.";
+  response += "</div>";
+  response += "<p>Conecte-se ao WiFi 'ESP32-CAM-Config' para reconfigurar.</p>";
+  response += "</div>";
+  response += "</body>";
+  response += "</html>";
+  
+  httpd_resp_set_type(req, "text/html");
+  httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+  httpd_resp_send(req, response.c_str(), response.length());
+  
+  // Reiniciar após um pequeno delay
+  delay(2000);
+  ESP.restart();
+  
+  return ESP_OK;
+}
+
 
 void startCameraServer() {
   // Testar a câmera antes de iniciar o servidor
@@ -808,6 +856,19 @@ void startCameraServer() {
 #endif
   };
 
+  httpd_uri_t wifi_reset_uri = {
+    .uri = "/reset",
+    .method = HTTP_GET,
+    .handler = wifi_reset_handler,
+    .user_ctx = NULL
+#ifdef CONFIG_HTTPD_WS_SUPPORT
+    ,
+    .is_websocket = true,
+    .handle_ws_control_frames = false,
+    .supported_subprotocol = NULL
+#endif
+  };
+
   ra_filter_init(&ra_filter, 20);
 
   log_i("Starting web server on port: '%d'", config.server_port);
@@ -823,6 +884,7 @@ void startCameraServer() {
     httpd_register_uri_handler(camera_httpd, &greg_uri);
     httpd_register_uri_handler(camera_httpd, &pll_uri);
     httpd_register_uri_handler(camera_httpd, &win_uri);
+    httpd_register_uri_handler(camera_httpd, &wifi_reset_uri);
   }
 
   config.server_port += 1;

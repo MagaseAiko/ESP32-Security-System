@@ -1,10 +1,11 @@
 #include "esp_camera.h"
 #include <WiFi.h>
+#include "wifi_manager.h"
 
 #include "board_config.h"
 
-const char *ssid = "VIVOFIBRA-4861";
-const char *password = "NozhVgaS7q";
+// Instância do gerenciador WiFi
+WiFiManager wifiManager;
 
 boolean ClockBool = false;
 boolean StreamSizeBool = false;
@@ -83,27 +84,35 @@ if (config.pixel_format == PIXFORMAT_JPEG) {
   setupLedFlash();
 #endif
 
-  WiFi.config(local_IP, gateway, subnet, primaryDNS, secondaryDNS);
-  WiFi.begin(ssid, password);
-  WiFi.setSleep(false);
-
-  Serial.print("WiFi connecting");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  // Inicializar gerenciador WiFi
+  bool wifiConnected = wifiManager.begin();
+  
+  if (wifiConnected) {
+    // Configurar IP estático após conexão bem-sucedida
+    wifiManager.setStaticIP(local_IP, gateway, subnet, primaryDNS, secondaryDNS);
+    
+    Serial.println("WiFi conectado com sucesso!");
+    startCameraServer();
+    
+    Serial.print("Camera Ready! Use 'http://");
+    Serial.print(WiFi.localIP());
+    Serial.println("' to connect");
+  } else {
+    Serial.println("Modo de configuração ativo!");
+    Serial.println("Conecte-se ao WiFi 'ESP32-CAM-Config' e acesse http://192.168.4.1");
   }
-  Serial.println("");
-  Serial.println("WiFi connected");
-
-  startCameraServer();
-
-  Serial.print("Camera Ready! Use 'http://");
-  Serial.print(WiFi.localIP());
-  Serial.println("' to connect");
 }
 
 void loop() {
-  delay(10000);
+  // Verificar status do WiFi
+  wifiManager.handleWiFiConnection();
+  
+  // Se estiver em modo de configuração, processar servidor
+  if (WiFi.getMode() == WIFI_AP) {
+    wifiManager.handleConfigServer();
+  }
+  
+  delay(1000);
 
   if(!ClockBool)
  {
