@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, Dimensions, Linking } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, Dimensions, Linking, Animated, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useESP32 } from '@/contexts/ESP32Context';
@@ -14,6 +14,22 @@ export default function HomeScreen() {
   const { esp32Url, setEsp32Url, isConnected, setIsConnected, isNgrokUrl } = useESP32();
   const [inputUrl, setInputUrl] = useState(esp32Url);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [buttonScale] = useState(new Animated.Value(1));
+
+  const animateButton = () => {
+    Animated.sequence([
+      Animated.timing(buttonScale, {
+        toValue: 0.96,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+      Animated.timing(buttonScale, {
+        toValue: 1,
+        duration: 80,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
 
   const testConnection = async () => {
     if (!inputUrl.trim()) {
@@ -101,96 +117,81 @@ export default function HomeScreen() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <ThemedView style={styles.header}>
-        <ThemedText type="title" style={styles.title}>
-          ESP32-CAM Viewer
+      <View style={styles.spacer} />
+      <View style={styles.headerMinimal}>
+        <ThemedText type="title" style={styles.titleMinimal}>
+          ESP32-CAM
         </ThemedText>
-        <ThemedText style={styles.subtitle}>
-          Conecte-se à sua câmera ESP32-CAM
+        <ThemedText style={styles.subtitleMinimal}>
+          Visualize e controle sua câmera de forma simples
         </ThemedText>
-      </ThemedView>
-
-      <ThemedView style={styles.connectionSection}>
-        <ThemedText type="subtitle" style={styles.sectionTitle}>
-          Configuração de Conexão
-        </ThemedText>
-        
-        <ThemedView style={styles.inputContainer}>
-          <ThemedText style={styles.inputLabel}>
-            {isNgrokUrl ? 'URL do Ngrok:' : 'Endereço IP do ESP32-CAM:'}
-          </ThemedText>
-          <TextInput
-            style={styles.textInput}
-            value={inputUrl}
-            onChangeText={setInputUrl}
-            placeholder={isNgrokUrl ? "https://78e83deb645c.ngrok-free.app" : "192.168.15.200"}
-            placeholderTextColor="#999"
-            keyboardType="default"
-            editable={!isConnected}
-            autoCapitalize="none"
-            autoCorrect={false}
-            autoComplete="off"
-          />
-          {isNgrokUrl && (
-            <ThemedText style={styles.helpText}>
-              Cole aqui a URL completa do Ngrok (ex: https://78e83deb645c.ngrok-free.app)
-            </ThemedText>
-          )}
-        </ThemedView>
-
-        <ThemedView style={styles.buttonContainer}>
+      </View>
+      <View style={styles.cardMinimal}>
+        <TextInput
+          style={styles.textInputMinimal}
+          value={inputUrl}
+          onChangeText={setInputUrl}
+          placeholder={isNgrokUrl ? "URL do Ngrok" : "IP do ESP32-CAM"}
+          placeholderTextColor="#b0b0b0"
+          keyboardType="default"
+          editable={!isConnected}
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="off"
+        />
+        <View style={styles.buttonRowMinimal}>
           {!isConnected ? (
-            <TouchableOpacity
-              style={[styles.button, styles.connectButton]}
-              onPress={testConnection}
-              disabled={isConnecting}
-            >
-              <IconSymbol name="wifi" size={20} color="#fff" />
-              <ThemedText style={styles.buttonText}>
-                {isConnecting ? 'Conectando...' : 'Conectar'}
-              </ThemedText>
-            </TouchableOpacity>
+            <Animated.View style={{ transform: [{ scale: buttonScale }], flex: 1 }}>
+              <TouchableOpacity
+                style={styles.actionButtonMinimal}
+                onPress={() => { animateButton(); testConnection(); }}
+                activeOpacity={0.85}
+                disabled={isConnecting}
+              >
+                <IconSymbol name="wifi" size={22} color="#fff" />
+                <ThemedText style={styles.actionButtonTextMinimal}>
+                  {isConnecting ? 'Conectando...' : 'Conectar'}
+                </ThemedText>
+              </TouchableOpacity>
+            </Animated.View>
           ) : (
-            <TouchableOpacity
-              style={[styles.button, styles.disconnectButton]}
-              onPress={disconnect}
-            >
-              <IconSymbol name="wifi.slash" size={20} color="#fff" />
-              <ThemedText style={styles.buttonText}>Desconectar</ThemedText>
-            </TouchableOpacity>
+            <Animated.View style={{ transform: [{ scale: buttonScale }], flex: 1 }}>
+              <TouchableOpacity
+                style={[styles.actionButtonMinimal, styles.disconnectButtonMinimal]}
+                onPress={() => { animateButton(); disconnect(); }}
+                activeOpacity={0.85}
+              >
+                <IconSymbol name="wifi.slash" size={22} color="#fff" />
+                <ThemedText style={styles.actionButtonTextMinimal}>Desconectar</ThemedText>
+              </TouchableOpacity>
+            </Animated.View>
           )}
-        </ThemedView>
-
+        </View>
         {isConnected && (
-          <ThemedView style={styles.statusContainer}>
-            <IconSymbol name="checkmark.circle.fill" size={20} color="#4CAF50" />
-            <ThemedText style={styles.statusText}>
-              {isNgrokUrl ? 'Conectado via Ngrok:' : 'Conectado:'} {esp32Url}
+          <View style={styles.statusMinimal}>
+            <IconSymbol name="checkmark.circle.fill" size={18} color="#43a047" />
+            <ThemedText style={styles.statusTextMinimal}>
+              {isNgrokUrl ? 'Ngrok:' : 'IP:'} {esp32Url}
             </ThemedText>
-          </ThemedView>
+          </View>
         )}
-      </ThemedView>
-
+      </View>
       {isConnected && isNgrokUrl && (
         <NgrokInfo isVisible={true} ngrokUrl={esp32Url} />
       )}
-
       {isConnected && (
-        <ThemedView style={styles.cameraSection}>
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            Stream de Vídeo
-          </ThemedText>
-          
-          <ThemedView style={styles.videoContainer}>
+        <View style={styles.cardMinimal}>
+          <ThemedText style={styles.sectionTitleMinimal}>Stream de Vídeo</ThemedText>
+          <View style={styles.videoContainerMinimal}>
             <VideoStream 
-              width={screenWidth - 32} 
-              height={(screenWidth - 32) * 0.75} 
+              width={screenWidth - 48} 
+              height={(screenWidth - 48) * 0.6} 
             />
-          </ThemedView>
-
+          </View>
           <CameraCapture />
-        </ThemedView>
+        </View>
       )}
+      <View style={styles.spacer} />
     </ScrollView>
   );
 }
@@ -198,118 +199,101 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#f8fafc',
   },
-  header: {
-    padding: 20,
+  spacer: {
+    height: 32,
+  },
+  headerMinimal: {
     alignItems: 'center',
-    backgroundColor: '#007AFF',
+    marginBottom: 16,
   },
-  title: {
-    color: '#fff',
-    fontSize: 24,
+  titleMinimal: {
+    fontSize: 32,
     fontWeight: 'bold',
-    marginBottom: 8,
+    color: '#222',
+    marginBottom: 4,
+    letterSpacing: 0.5,
   },
-  subtitle: {
-    color: '#fff',
-    fontSize: 16,
-    opacity: 0.9,
+  subtitleMinimal: {
+    fontSize: 15,
+    color: '#888',
+    marginBottom: 2,
+    fontWeight: '400',
   },
-  connectionSection: {
-    margin: 16,
-    padding: 16,
-    borderRadius: 12,
+  cardMinimal: {
     backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 20,
+    marginHorizontal: 16,
+    marginBottom: 20,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    alignItems: 'stretch',
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    color: '#333',
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 14,
-    marginBottom: 8,
-    color: '#666',
-  },
-  textInput: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    padding: 12,
+  textInputMinimal: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
-  },
-  buttonContainer: {
+    color: '#222',
+    borderWidth: 0,
     marginBottom: 16,
   },
-  button: {
+  buttonRowMinimal: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 8,
+  },
+  actionButtonMinimal: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    paddingVertical: 14,
     gap: 8,
+    shadowColor: '#007AFF',
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
-  connectButton: {
-    backgroundColor: '#4CAF50',
+  disconnectButtonMinimal: {
+    backgroundColor: '#e73827',
   },
-  disconnectButton: {
-    backgroundColor: '#f44336',
-  },
-  buttonText: {
+  actionButtonTextMinimal: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
-  statusContainer: {
+  statusMinimal: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#E8F5E8',
-    borderRadius: 8,
-    gap: 8,
+    gap: 6,
+    marginTop: 8,
+    marginBottom: 2,
   },
-  statusText: {
-    color: '#4CAF50',
+  statusTextMinimal: {
+    color: '#43a047',
     fontSize: 14,
     fontWeight: '500',
   },
-  helpText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-    fontStyle: 'italic',
+  sectionTitleMinimal: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#222',
+    marginBottom: 12,
+    marginTop: 2,
   },
-  cameraSection: {
-    margin: 16,
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  videoContainer: {
+  videoContainerMinimal: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
 });
