@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, Dimensions, Linking, Animated, View } from 'react-native';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useESP32 } from '@/contexts/ESP32Context';
@@ -15,6 +17,9 @@ export default function HomeScreen() {
   const [inputUrl, setInputUrl] = useState(esp32Url);
   const [isConnecting, setIsConnecting] = useState(false);
   const [buttonScale] = useState(new Animated.Value(1));
+  const systemColorScheme = useColorScheme();
+  const [theme, setTheme] = useState<'light' | 'dark'>(systemColorScheme ?? 'light');
+  const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
 
   const animateButton = () => {
     Animated.sequence([
@@ -115,24 +120,31 @@ export default function HomeScreen() {
     Alert.alert('Desconectado', 'Conexão com ESP32-CAM encerrada');
   };
 
+  // Cores do tema
+  const themeColors = Colors[theme];
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} showsVerticalScrollIndicator={false}>
       <View style={styles.spacer} />
       <View style={styles.headerMinimal}>
-        <ThemedText type="title" style={styles.titleMinimal}>
+        <View style={styles.themeToggleAbsolute}>
+          <TouchableOpacity onPress={toggleTheme} style={[styles.themeToggleBtn, { backgroundColor: theme === 'dark' ? '#23272b' : 'rgba(0,0,0,0.04)' }]} accessibilityLabel="Alternar tema">
+            <IconSymbol name={theme === 'dark' ? 'sun.max.fill' : 'moon.fill'} size={26} color={theme === 'dark' ? '#FFD700' : '#222'} />
+          </TouchableOpacity>
+        </View>
+        <ThemedText type="title" style={[styles.titleMinimal, { color: themeColors.text }]}>
           ESP32-CAM
         </ThemedText>
-        <ThemedText style={styles.subtitleMinimal}>
+        <ThemedText style={[styles.subtitleMinimal, { color: theme === 'dark' ? '#aaa' : '#888' }] }>
           Visualize e controle sua câmera de forma simples
         </ThemedText>
       </View>
-      <View style={styles.cardMinimal}>
+      <View style={[styles.cardMinimal, { backgroundColor: theme === 'dark' ? '#23272b' : '#fff', borderColor: theme === 'dark' ? '#23272b' : '#fff' }]}> 
         <TextInput
-          style={styles.textInputMinimal}
+          style={[styles.textInputMinimal, theme === 'dark' && styles.textInputMinimalDark, { color: themeColors.text, backgroundColor: theme === 'dark' ? '#181c20' : '#f3f4f6' }]}
           value={inputUrl}
           onChangeText={setInputUrl}
           placeholder={isNgrokUrl ? "URL do Ngrok" : "IP do ESP32-CAM"}
-          placeholderTextColor="#b0b0b0"
+          placeholderTextColor={theme === 'dark' ? '#888' : '#b0b0b0'}
           keyboardType="default"
           editable={!isConnected}
           autoCapitalize="none"
@@ -143,13 +155,13 @@ export default function HomeScreen() {
           {!isConnected ? (
             <Animated.View style={{ transform: [{ scale: buttonScale }], flex: 1 }}>
               <TouchableOpacity
-                style={styles.actionButtonMinimal}
+                style={[styles.actionButtonMinimal, { backgroundColor: theme === 'dark' ? '#2d7cf7' : '#007AFF' }]}
                 onPress={() => { animateButton(); testConnection(); }}
                 activeOpacity={0.85}
                 disabled={isConnecting}
               >
                 <IconSymbol name="wifi" size={22} color="#fff" />
-                <ThemedText style={styles.actionButtonTextMinimal}>
+                <ThemedText style={[styles.actionButtonTextMinimal, { color: '#fff' }]}>
                   {isConnecting ? 'Conectando...' : 'Conectar'}
                 </ThemedText>
               </TouchableOpacity>
@@ -157,20 +169,20 @@ export default function HomeScreen() {
           ) : (
             <Animated.View style={{ transform: [{ scale: buttonScale }], flex: 1 }}>
               <TouchableOpacity
-                style={[styles.actionButtonMinimal, styles.disconnectButtonMinimal]}
+                style={[styles.actionButtonMinimal, styles.disconnectButtonMinimal, { backgroundColor: theme === 'dark' ? '#e05a47' : '#e73827' }]}
                 onPress={() => { animateButton(); disconnect(); }}
                 activeOpacity={0.85}
               >
                 <IconSymbol name="wifi.slash" size={22} color="#fff" />
-                <ThemedText style={styles.actionButtonTextMinimal}>Desconectar</ThemedText>
+                <ThemedText style={[styles.actionButtonTextMinimal, { color: '#fff' }]}>Desconectar</ThemedText>
               </TouchableOpacity>
             </Animated.View>
           )}
         </View>
         {isConnected && (
           <View style={styles.statusMinimal}>
-            <IconSymbol name="checkmark.circle.fill" size={18} color="#43a047" />
-            <ThemedText style={styles.statusTextMinimal}>
+            <IconSymbol name="checkmark.circle.fill" size={18} color={theme === 'dark' ? '#43ff99' : '#43a047'} />
+            <ThemedText style={[styles.statusTextMinimal, { color: theme === 'dark' ? '#43ff99' : '#43a047' }] }>
               {isNgrokUrl ? 'Ngrok:' : 'IP:'} {esp32Url}
             </ThemedText>
           </View>
@@ -180,8 +192,8 @@ export default function HomeScreen() {
         <NgrokInfo isVisible={true} ngrokUrl={esp32Url} />
       )}
       {isConnected && (
-        <View style={styles.cardMinimal}>
-          <ThemedText style={styles.sectionTitleMinimal}>Stream de Vídeo</ThemedText>
+        <View style={[styles.cardMinimal, { backgroundColor: theme === 'dark' ? '#23272b' : '#fff', borderColor: theme === 'dark' ? '#23272b' : '#fff' }] }>
+          <ThemedText style={[styles.sectionTitleMinimal, { color: themeColors.text }]}>Stream de Vídeo</ThemedText>
           <View style={styles.videoContainerMinimal}>
             <VideoStream 
               width={screenWidth - 48} 
@@ -201,12 +213,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc',
   },
+  containerDark: {
+    backgroundColor: '#151718',
+  },
   spacer: {
     height: 32,
   },
   headerMinimal: {
     alignItems: 'center',
     marginBottom: 16,
+  },
+  themeToggleAbsolute: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    zIndex: 10,
+    padding: 8,
+  },
+  themeToggleBtn: {
+    padding: 10,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   titleMinimal: {
     fontSize: 32,
@@ -234,6 +263,9 @@ const styles = StyleSheet.create({
     elevation: 2,
     alignItems: 'stretch',
   },
+  cardMinimalDark: {
+    backgroundColor: '#23272b',
+  },
   textInputMinimal: {
     backgroundColor: '#f3f4f6',
     borderRadius: 12,
@@ -243,6 +275,10 @@ const styles = StyleSheet.create({
     color: '#222',
     borderWidth: 0,
     marginBottom: 16,
+  },
+  textInputMinimalDark: {
+    backgroundColor: '#181c20',
+    color: '#eee',
   },
   buttonRowMinimal: {
     flexDirection: 'row',
@@ -263,6 +299,9 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+  },
+  actionButtonMinimalDark: {
+    backgroundColor: '#2d7cf7',
   },
   disconnectButtonMinimal: {
     backgroundColor: '#e73827',
