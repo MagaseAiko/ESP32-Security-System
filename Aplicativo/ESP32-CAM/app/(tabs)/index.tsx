@@ -48,16 +48,16 @@ export default function HomeScreen() {
       const isNgrok = inputUrl.includes('ngrok') || 
                      (inputUrl.startsWith('https://') && !inputUrl.includes('192.168.') && !inputUrl.includes('10.') && !inputUrl.includes('172.'));
       
-      // Construir URL de teste baseada no tipo
+      // Construir URL de teste baseada no tipo (usar snapshot/capture para garantir resposta da câmera)
       let testUrl: string;
       if (isNgrok) {
-        // Para Ngrok, usar a URL completa com /status
+        // Para Ngrok, usar a URL completa com /capture
         testUrl = inputUrl.startsWith('https://') 
-          ? `${inputUrl}/status` 
-          : `https://${inputUrl}/status`;
+          ? `${inputUrl}/capture` 
+          : `https://${inputUrl}/capture`;
       } else {
         // Para IP local, usar HTTP com porta padrão
-        testUrl = `http://${inputUrl}/status`;
+        testUrl = `http://${inputUrl}/capture`;
       }
       
       console.log('Testando conexão:', testUrl);

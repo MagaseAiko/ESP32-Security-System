@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, StyleSheet, Alert, ActivityIndicator, Text } from 'react-native';
+import { View, StyleSheet, Animated, ActivityIndicator, Text, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { ThemedView } from './themed-view';
 import { ThemedText } from './themed-text';
@@ -11,21 +11,29 @@ interface VideoStreamProps {
 }
 
 export function VideoStream({ width = 320, height = 240 }: VideoStreamProps) {
-  const { streamUrl, isConnected } = useESP32();
+  const { streamUrl, captureUrl, isConnected } = useESP32();
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [snapshotUrl, setSnapshotUrl] = useState(streamUrl);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [snapshotUrl, setSnapshotUrl] = useState(captureUrl);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  // Atualiza o snapshot periodicamente quando conectado
+  // Detecta se MJPEG pode ser usado (apenas web ou se for possível no Android)
+  const canUseMjpeg = Platform.OS === 'web';
+
+  // Polling de snapshot se não for MJPEG
   React.useEffect(() => {
-    if (isConnected) {
+    if (!canUseMjpeg && isConnected) {
       setHasError(false);
       setIsLoading(true);
-      // Atualiza a cada 200ms
       intervalRef.current = setInterval(() => {
-        setSnapshotUrl(`${streamUrl}?t=${Date.now()}`);
-      }, 200);
+        // Fade out
+        Animated.timing(fadeAnim, { toValue: 0, duration: 80, useNativeDriver: true }).start(() => {
+          setSnapshotUrl(`${captureUrl}?t=${Date.now()}`);
+          // Fade in
+          Animated.timing(fadeAnim, { toValue: 1, duration: 120, useNativeDriver: true }).start();
+        });
+      }, 400);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -39,7 +47,7 @@ export function VideoStream({ width = 320, height = 240 }: VideoStreamProps) {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected, streamUrl]);
+  }, [isConnected, captureUrl]);
 
   if (!isConnected) {
     return (
@@ -69,18 +77,34 @@ export function VideoStream({ width = 320, height = 240 }: VideoStreamProps) {
           <Text style={styles.loadingText}>Conectando...</Text>
         </View>
       )}
-      <Image
-        source={{ uri: snapshotUrl }}
-        style={[styles.video, { width, height }]}
-        contentFit="cover"
-        onLoadStart={() => setIsLoading(true)}
-        onLoadEnd={() => setIsLoading(false)}
-        onError={() => {
-          setHasError(true);
-          setIsLoading(false);
-        }}
-        cachePolicy="none"
-      />
+      {canUseMjpeg ? (
+        <Image
+          source={{ uri: streamUrl }}
+          style={[styles.video, { width, height }]}
+          contentFit="cover"
+          onLoadStart={() => setIsLoading(true)}
+          onLoadEnd={() => setIsLoading(false)}
+          onError={() => {
+            setHasError(true);
+            setIsLoading(false);
+          }}
+        />
+      ) : (
+        <Animated.View style={{ opacity: fadeAnim }}>
+          <Image
+            source={{ uri: snapshotUrl }}
+            style={[styles.video, { width, height }]}
+            contentFit="cover"
+            onLoadStart={() => setIsLoading(true)}
+            onLoadEnd={() => setIsLoading(false)}
+            onError={() => {
+              setHasError(true);
+              setIsLoading(false);
+            }}
+            cachePolicy="none"
+          />
+        </Animated.View>
+      )}
     </ThemedView>
   );
 }
