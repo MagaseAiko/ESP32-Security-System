@@ -7,8 +7,12 @@ WiFiManager::WiFiManager() {
     apPassword = "";
     hasStoredCredentials = false;
     hasConnectedOnce = false;
+    configMode = false;
     connectionAttempts = 0;
     maxConnectionAttempts = 5;
+    desiredStaticHost = 200; // padrão: último octeto 200
+    defaultPrimaryDNS = IPAddress(8,8,8,8);
+    defaultSecondaryDNS = IPAddress(8,8,4,4);
 }
 
 WiFiManager::~WiFiManager() {
@@ -58,17 +62,31 @@ void WiFiManager::startAP() {
     Serial.print("IP: ");
     Serial.println(WiFi.softAPIP());
     
+    Serial.println("Inicializando servidor de configuração...");
+    configMode = true;
     startConfigServer();
 }
 
 void WiFiManager::stopAP() {
+    Serial.println("Parando modo AP e servidor de configuração...");
     if (server) {
         server->stop();
+        delete server;
+        server = nullptr;
     }
     if (dnsServer) {
         dnsServer->stop();
+        delete dnsServer;
+        dnsServer = nullptr;
     }
     WiFi.softAPdisconnect(true);
+    // Voltar para modo STA para permitir tentativas de conexão
+    WiFi.mode(WIFI_STA);
+    configMode = false;
+}
+
+bool WiFiManager::isConfigModeActive() {
+    return configMode;
 }
 
 bool WiFiManager::hasStoredWiFi() {
@@ -140,7 +158,35 @@ bool WiFiManager::connectToWiFi(const String& ssid, const String& password) {
     }
 }
 
+void WiFiManager::setDesiredStaticHost(uint8_t host) {
+    desiredStaticHost = host;
+}
+
+bool WiFiManager::computeAndApplyStaticIP() {
+    if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("computeAndApplyStaticIP: WiFi não conectado, abortando.");
+        return false;
+    }
+    IPAddress realGateway = WiFi.gatewayIP();
+    IPAddress subnet = WiFi.subnetMask();
+    IPAddress localIP;
+    for (int i = 0; i < 4; ++i) {
+        localIP[i] = (realGateway[i] & subnet[i]) | (desiredStaticHost & (~subnet[i]));
+    }
+    Serial.print("Tentando aplicar IP fixo calculado: ");
+    Serial.println(localIP);
+    bool ok = setStaticIP(localIP, realGateway, subnet, defaultPrimaryDNS, defaultSecondaryDNS);
+    if (!ok) {
+        Serial.println("computeAndApplyStaticIP: falha ao aplicar IP estático.");
+    }
+    return ok;
+}
+
 void WiFiManager::handleWiFiConnection() {
+    // Se estivermos no modo de configuração, não tentar reconectar nem imprimir mensagens
+    if (configMode) {
+        return;
+    }
     if (WiFi.status() != WL_CONNECTED) {
         if (hasStoredCredentials && !hasConnectedOnce) {
             // Primeira tentativa com novo WiFi
@@ -168,7 +214,10 @@ void WiFiManager::startConfigServer() {
     dnsServer = new DNSServer();
     
     // Configurar DNS para capturar todas as requisições
-    dnsServer->start(53, "*", WiFi.softAPIP());
+    IPAddress apIp = WiFi.softAPIP();
+    Serial.print("DNS será iniciado apontando para ");
+    Serial.println(apIp);
+    dnsServer->start(53, "*", apIp);
     
     // Rota principal - página de configuração
     server->on("/", [this]() {
@@ -188,6 +237,12 @@ void WiFiManager::startConfigServer() {
             delay(2000);
             if (connectToWiFi(ssid, password)) {
                 Serial.println("Conectado! Parando servidor de configuração...");
+                // Aplicar IP fixo calculado baseado no gateway real
+                if (computeAndApplyStaticIP()) {
+                    Serial.println("IP fixo aplicado com sucesso após conexão.");
+                } else {
+                    Serial.println("Não foi possível aplicar IP fixo; permanecendo em DHCP.");
+                }
                 stopAP();
             }
         } else {
@@ -208,6 +263,11 @@ void WiFiManager::startConfigServer() {
     
     server->begin();
     Serial.println("Servidor de configuração iniciado!");
+    if (server && dnsServer) {
+        Serial.println("Servidor web e DNS ativos para configuração.");
+    } else {
+        Serial.println("Falha ao iniciar servidor web ou DNS.");
+    }
 }
 
 void WiFiManager::stopConfigServer() {
@@ -220,10 +280,15 @@ void WiFiManager::stopConfigServer() {
 }
 
 void WiFiManager::handleConfigServer() {
-    if (server) {
+    // Processar requisições do servidor e DNS se estiverem ativos
+    if (!server) {
+        Serial.println("handleConfigServer: servidor web não inicializado");
+    } else {
         server->handleClient();
     }
-    if (dnsServer) {
+    if (!dnsServer) {
+        Serial.println("handleConfigServer: DNS não inicializado");
+    } else {
         dnsServer->processNextRequest();
     }
 }
@@ -357,12 +422,46 @@ void WiFiManager::resetWiFi() {
     ESP.restart();
 }
 
-void WiFiManager::setStaticIP(IPAddress localIP, IPAddress gateway, IPAddress subnet, IPAddress primaryDNS, IPAddress secondaryDNS) {
+bool WiFiManager::setStaticIP(IPAddress localIP, IPAddress gateway, IPAddress subnet, IPAddress primaryDNS, IPAddress secondaryDNS) {
     if (WiFi.status() == WL_CONNECTED) {
-        Serial.println("Configurando IP estático...");
-        WiFi.config(localIP, gateway, subnet, primaryDNS, secondaryDNS);
-        delay(1000);
-        Serial.print("IP estático configurado: ");
-        Serial.println(WiFi.localIP());
+        // Antes de aplicar, verificar o gateway real da interface (pode diferir do parámetro)
+        IPAddress realGateway = WiFi.gatewayIP();
+
+        IPAddress netLocal, netRealGateway;
+        for (int i = 0; i < 4; ++i) {
+            netLocal[i] = localIP[i] & subnet[i];
+            netRealGateway[i] = realGateway[i] & subnet[i];
+        }
+        bool sameSubnet = true;
+        for (int i = 0; i < 4; ++i) {
+            if (netLocal[i] != netRealGateway[i]) {
+                sameSubnet = false;
+                break;
+            }
+        }
+
+        if (!sameSubnet) {
+            Serial.println("IP estático ignorado: endereço desejado não está na mesma sub-rede do gateway real.");
+            Serial.print("localIP: "); Serial.println(localIP);
+            Serial.print("gateway(param): "); Serial.println(gateway);
+            Serial.print("gateway(real): "); Serial.println(realGateway);
+            Serial.print("subnet: "); Serial.println(subnet);
+            Serial.println("Usando DHCP para esta conexão.");
+            return false;
+        }
+
+        Serial.print("Configurando IP estático... (gateway real detectado: ");
+        Serial.print(realGateway);
+        Serial.println(")");
+        // Use o gateway real ao aplicar a configuração
+        if (WiFi.config(localIP, realGateway, subnet, primaryDNS, secondaryDNS)) {
+            delay(1000);
+            Serial.print("IP estático configurado: ");
+            Serial.println(WiFi.localIP());
+            return true;
+        } else {
+            Serial.println("Falha ao configurar IP estático.");
+            return false;
+        }
     }
 }

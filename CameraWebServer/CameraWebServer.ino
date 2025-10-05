@@ -86,6 +86,8 @@ if (config.pixel_format == PIXFORMAT_JPEG) {
 
   // Inicializar gerenciador WiFi
   bool wifiConnected = wifiManager.begin();
+  // Exemplo: definir o último octeto desejado do IP fixo (opcional)
+  // wifiManager.setDesiredStaticHost(200); // padrão é 200
   
   if (wifiConnected) {
     // Configurar IP estático após conexão bem-sucedida
@@ -108,7 +110,7 @@ void loop() {
   wifiManager.handleWiFiConnection();
   
   // Se estiver em modo de configuração, processar servidor
-  if (WiFi.getMode() == WIFI_AP) {
+  if (wifiManager.isConfigModeActive()) {
     wifiManager.handleConfigServer();
   }
   

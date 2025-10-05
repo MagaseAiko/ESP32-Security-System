@@ -21,8 +21,12 @@ private:
     // Estados
     bool hasStoredCredentials;
     bool hasConnectedOnce;
+    bool configMode;
     int connectionAttempts;
     int maxConnectionAttempts;
+    uint8_t desiredStaticHost;
+    IPAddress defaultPrimaryDNS;
+    IPAddress defaultSecondaryDNS;
     
     // HTML da página de configuração
     String getConfigPageHTML();
@@ -53,6 +57,7 @@ public:
     void startConfigServer();
     void stopConfigServer();
     void handleConfigServer();
+    bool isConfigModeActive();
     
     // Getters
     String getCurrentSSID();
@@ -63,7 +68,11 @@ public:
     void resetWiFi();
     
     // Configuração de IP estático
-    void setStaticIP(IPAddress localIP, IPAddress gateway, IPAddress subnet, IPAddress primaryDNS, IPAddress secondaryDNS);
+    bool setStaticIP(IPAddress localIP, IPAddress gateway, IPAddress subnet, IPAddress primaryDNS, IPAddress secondaryDNS);
+    // Define o último octeto desejado para IP fixo (ex: 200)
+    void setDesiredStaticHost(uint8_t host);
+    // Calcula um IP fixo baseado no gateway real e tenta aplicar (usa desiredStaticHost)
+    bool computeAndApplyStaticIP();
 };
 
 #endif
