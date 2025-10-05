@@ -9,6 +9,7 @@ import { VideoStream } from '@/components/VideoStream';
 import { CameraCapture } from '@/components/CameraCapture';
 import { NgrokInfo } from '@/components/NgrokInfo';
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { Feather } from '@expo/vector-icons';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -18,7 +19,7 @@ export default function HomeScreen() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [buttonScale] = useState(new Animated.Value(1));
   const systemColorScheme = useColorScheme();
-  const [theme, setTheme] = useState<'light' | 'dark'>(systemColorScheme ?? 'light');
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
 
   const animateButton = () => {
@@ -128,7 +129,7 @@ export default function HomeScreen() {
       <View style={styles.headerMinimal}>
         <View style={styles.themeToggleAbsolute}>
           <TouchableOpacity onPress={toggleTheme} style={[styles.themeToggleBtn, { backgroundColor: theme === 'dark' ? '#23272b' : 'rgba(0,0,0,0.04)' }]} accessibilityLabel="Alternar tema">
-            <IconSymbol name={theme === 'dark' ? 'sun.max.fill' : 'moon.fill'} size={26} color={theme === 'dark' ? '#FFD700' : '#222'} />
+            <Feather name="sun" size={26} color={theme === 'dark' ? '#FFD700' : '#222'} />
           </TouchableOpacity>
         </View>
         <ThemedText type="title" style={[styles.titleMinimal, { color: themeColors.text }]}>
