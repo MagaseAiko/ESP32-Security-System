@@ -4,6 +4,7 @@ import { ThemedView } from './themed-view';
 import { ThemedText } from './themed-text';
 import { IconSymbol } from './ui/icon-symbol';
 import { useESP32 } from '@/contexts/ESP32Context';
+import { useThemeCustom } from '@/contexts/ThemeContext';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
 import { Platform } from 'react-native';
@@ -86,10 +87,23 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
     }
   };
 
+  const { theme } = useThemeCustom();
   return (
-    <ThemedView style={styles.container}>
+    <View style={[
+      styles.boxMinimal,
+      {
+        backgroundColor: theme === 'dark' ? '#23272b' : '#fff',
+        borderColor: theme === 'dark' ? '#23272b' : '#fff',
+        shadowColor: theme === 'dark' ? '#23272b' : '#000',
+      },
+    ]}>
       <TouchableOpacity
-        style={[styles.captureButton, isCapturing && styles.captureButtonDisabled]}
+        style={[styles.captureButton,
+          { backgroundColor: theme === 'dark' ? '#2d7cf7' : '#007AFF',
+            shadowColor: theme === 'dark' ? '#23272b' : '#000',
+          },
+          isCapturing && styles.captureButtonDisabled
+        ]}
         onPress={capturePhoto}
         disabled={isCapturing || !isConnected}
       >
@@ -99,18 +113,25 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
           <IconSymbol name="camera.fill" size={24} color="#fff" />
         )}
       </TouchableOpacity>
-      
-      <ThemedText style={styles.captureText}>
+      <ThemedText style={[styles.captureText, { color: theme === 'dark' ? '#aaa' : '#666' }] }>
         {isCapturing ? 'Capturando...' : 'Capturar Foto'}
       </ThemedText>
-    </ThemedView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  boxMinimal: {
     alignItems: 'center',
     paddingVertical: 16,
+    borderRadius: 18,
+    marginHorizontal: 0,
+    marginBottom: 20,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+    borderWidth: 1,
   },
   captureButton: {
     width: 60,

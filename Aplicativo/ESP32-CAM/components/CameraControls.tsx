@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Alert, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { useThemeCustom } from '@/contexts/ThemeContext';
 import { ThemedView } from './themed-view';
 import { ThemedText } from './themed-text';
 import { useESP32 } from '@/contexts/ESP32Context';
@@ -19,6 +20,7 @@ interface CameraControlsProps {
 
 export function CameraControls({ onSettingsChange }: CameraControlsProps) {
   const { controlUrl, statusUrl, isConnected } = useESP32();
+  const { theme } = useThemeCustom();
   const [settings, setSettings] = useState<CameraSettings>({
     quality: 10,
     brightness: 0,
@@ -99,19 +101,20 @@ export function CameraControls({ onSettingsChange }: CameraControlsProps) {
     max: number;
     step?: number;
   }) => (
-    <View style={styles.controlItem}>
-      <ThemedText style={styles.controlLabel}>{title}: {value}</ThemedText>
-      <View style={styles.sliderContainer}>
+    <View style={styles.controlItemMinimal}>
+      <ThemedText style={[styles.controlLabelMinimal, { color: theme === 'dark' ? '#ECEDEE' : '#222' }]}>{title}: <ThemedText style={{fontWeight:'bold'}}>{value}</ThemedText></ThemedText>
+      <View style={styles.sliderContainerMinimal}>
         {Array.from({ length: Math.floor((max - min) / step) + 1 }, (_, i) => {
           const sliderValue = min + (i * step);
           const isActive = value === sliderValue;
-          
           return (
             <TouchableOpacity
               key={sliderValue}
-              style={[styles.sliderButton, isActive && styles.sliderButtonActive]}
+              style={[styles.sliderButtonMinimal, 
+                isActive && (theme === 'dark' ? styles.sliderButtonActiveDark : styles.sliderButtonActiveLight)
+              ]}
               onPress={() => applySetting(variable, sliderValue)}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
               accessibilityLabel={`Ajustar ${title} para ${sliderValue}`}
             />
           );
@@ -121,20 +124,12 @@ export function CameraControls({ onSettingsChange }: CameraControlsProps) {
   );
 
   if (!isConnected) {
-    return (
-      <ThemedView style={styles.container}>
-        <ThemedText style={styles.message}>
-          Conecte-se ao ESP32-CAM para ver os controles
-        </ThemedText>
-      </ThemedView>
-    );
+    return null;
   }
 
   return (
-    <ThemedView style={styles.container}>
-      <ThemedText style={styles.title}>Controles da Câmera</ThemedText>
-      
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+    <ThemedView style={[styles.containerMinimal, { backgroundColor: theme === 'dark' ? '#23272b' : '#fff', borderColor: theme === 'dark' ? '#23272b' : '#fff', borderRadius: 18, padding: 20, marginHorizontal: 0, marginBottom: 0, elevation: 0 }] }>
+      <ScrollView style={styles.scrollViewMinimal} showsVerticalScrollIndicator={false}>
         <ControlSlider
           title="Qualidade"
           variable="quality"
@@ -142,7 +137,6 @@ export function CameraControls({ onSettingsChange }: CameraControlsProps) {
           min={4}
           max={63}
         />
-        
         <ControlSlider
           title="Brilho"
           variable="brightness"
@@ -150,7 +144,6 @@ export function CameraControls({ onSettingsChange }: CameraControlsProps) {
           min={-2}
           max={2}
         />
-        
         <ControlSlider
           title="Contraste"
           variable="contrast"
@@ -158,7 +151,6 @@ export function CameraControls({ onSettingsChange }: CameraControlsProps) {
           min={-2}
           max={2}
         />
-        
         <ControlSlider
           title="Saturação"
           variable="saturation"
@@ -166,7 +158,6 @@ export function CameraControls({ onSettingsChange }: CameraControlsProps) {
           min={-2}
           max={2}
         />
-        
         <ControlSlider
           title="Resolução"
           variable="framesize"
@@ -174,7 +165,6 @@ export function CameraControls({ onSettingsChange }: CameraControlsProps) {
           min={0}
           max={13}
         />
-        
         <ControlSlider
           title="LED"
           variable="led_intensity"
@@ -189,48 +179,53 @@ export function CameraControls({ onSettingsChange }: CameraControlsProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  containerMinimal: {
     flex: 1,
-    padding: 16,
+    backgroundColor: 'transparent',
+    padding: 0,
+    margin: 0,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  scrollView: {
+  scrollViewMinimal: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
-  controlItem: {
-    marginBottom: 20,
+  controlItemMinimal: {
+    marginBottom: 22,
+    alignItems: 'stretch',
   },
-  controlLabel: {
-    fontSize: 16,
+  controlLabelMinimal: {
+    fontSize: 15,
     marginBottom: 8,
+    fontWeight: '500',
+    letterSpacing: 0.1,
   },
-  sliderContainer: {
+  sliderContainerMinimal: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 8,
+    gap: 4,
   },
-  sliderButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#ddd',
+  sliderButtonMinimal: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#e5e7eb',
     borderWidth: 1,
-    borderColor: '#999',
+    borderColor: '#cbd5e1',
+    marginHorizontal: 1,
+    ...Platform.select({
+      web: { cursor: 'pointer' },
+    }),
+    transitionProperty: 'background-color, border-color',
+    transitionDuration: '120ms',
   },
-  sliderButtonActive: {
+  sliderButtonActiveLight: {
     backgroundColor: '#007AFF',
     borderColor: '#007AFF',
   },
-  message: {
-    fontSize: 16,
-    textAlign: 'center',
-    color: '#666',
-    marginTop: 20,
+  sliderButtonActiveDark: {
+    backgroundColor: '#2d7cf7',
+    borderColor: '#2d7cf7',
   },
 });
