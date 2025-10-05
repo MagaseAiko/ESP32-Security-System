@@ -5,6 +5,7 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ESP32Provider } from '@/contexts/ESP32Context';
+import { ThemeProviderCustom } from '@/contexts/ThemeContext';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -15,13 +16,15 @@ export default function RootLayout() {
 
   return (
     <ESP32Provider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
+      <ThemeProviderCustom>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          </Stack>
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </ThemeProviderCustom>
     </ESP32Provider>
   );
 }

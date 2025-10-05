@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert, ScrollView } from 'react-native';
+import { View, StyleSheet, Alert, ScrollView, TouchableOpacity } from 'react-native';
 import { ThemedView } from './themed-view';
 import { ThemedText } from './themed-text';
 import { useESP32 } from '@/contexts/ESP32Context';
@@ -107,13 +107,12 @@ export function CameraControls({ onSettingsChange }: CameraControlsProps) {
           const isActive = value === sliderValue;
           
           return (
-            <View
+            <TouchableOpacity
               key={sliderValue}
-              style={[
-                styles.sliderButton,
-                isActive && styles.sliderButtonActive
-              ]}
-              onTouchEnd={() => applySetting(variable, sliderValue)}
+              style={[styles.sliderButton, isActive && styles.sliderButtonActive]}
+              onPress={() => applySetting(variable, sliderValue)}
+              activeOpacity={0.7}
+              accessibilityLabel={`Ajustar ${title} para ${sliderValue}`}
             />
           );
         })}

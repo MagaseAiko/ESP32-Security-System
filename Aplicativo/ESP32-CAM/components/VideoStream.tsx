@@ -14,56 +14,36 @@ export function VideoStream({ width = 320, height = 240 }: VideoStreamProps) {
   const { streamUrl, isConnected } = useESP32();
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
-  const [imageKey, setImageKey] = useState(0);
+  const [snapshotUrl, setSnapshotUrl] = useState(streamUrl);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Função para capturar frame do stream
-  const captureFrame = async () => {
-    try {
-      setIsLoading(true);
-      setHasError(false);
-      
-      // Adicionar timestamp para forçar atualização da imagem
-      const timestamp = Date.now();
-      const frameUrl = `${streamUrl}?t=${timestamp}`;
-      
-      // Simular captura de frame (o stream MJPEG é contínuo)
-      // Em um app real, você usaria uma biblioteca de vídeo adequada
-      setImageKey(prev => prev + 1);
-    } catch (error) {
-      console.error('Erro ao capturar frame:', error);
-      setHasError(true);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Iniciar captura de frames quando conectado
+  // Atualiza o snapshot periodicamente quando conectado
   React.useEffect(() => {
     if (isConnected) {
-      // Capturar frame inicial
-      captureFrame();
-      
-      // Configurar intervalo para capturar frames periodicamente
-      intervalRef.current = setInterval(captureFrame, 100); // 10 FPS
+      setHasError(false);
+      setIsLoading(true);
+      // Atualiza a cada 200ms
+      intervalRef.current = setInterval(() => {
+        setSnapshotUrl(`${streamUrl}?t=${Date.now()}`);
+      }, 200);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
     }
-
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConnected, streamUrl]);
 
   if (!isConnected) {
     return (
-      <ThemedView style={[styles.container, { width, height }]}>
+      <ThemedView style={[styles.container, { width, height }]}> 
         <ThemedText style={styles.message}>
           Conecte-se ao ESP32-CAM primeiro
         </ThemedText>
@@ -73,7 +53,7 @@ export function VideoStream({ width = 320, height = 240 }: VideoStreamProps) {
 
   if (hasError) {
     return (
-      <ThemedView style={[styles.container, { width, height }]}>
+      <ThemedView style={[styles.container, { width, height }]}> 
         <ThemedText style={styles.errorMessage}>
           Erro ao conectar com a câmera
         </ThemedText>
@@ -82,17 +62,15 @@ export function VideoStream({ width = 320, height = 240 }: VideoStreamProps) {
   }
 
   return (
-    <ThemedView style={[styles.container, { width, height }]}>
+    <ThemedView style={[styles.container, { width, height }]}> 
       {isLoading && (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#007AFF" />
           <Text style={styles.loadingText}>Conectando...</Text>
         </View>
       )}
-      
       <Image
-        key={imageKey}
-        source={{ uri: streamUrl }}
+        source={{ uri: snapshotUrl }}
         style={[styles.video, { width, height }]}
         contentFit="cover"
         onLoadStart={() => setIsLoading(true)}
@@ -101,7 +79,7 @@ export function VideoStream({ width = 320, height = 240 }: VideoStreamProps) {
           setHasError(true);
           setIsLoading(false);
         }}
-        cachePolicy="none" // Desabilitar cache para stream ao vivo
+        cachePolicy="none"
       />
     </ThemedView>
   );

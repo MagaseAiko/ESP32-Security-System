@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, Dimensions, Linking, Animated, View } from 'react-native';
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemeCustom } from '@/contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useESP32 } from '@/contexts/ESP32Context';
@@ -18,9 +18,7 @@ export default function HomeScreen() {
   const [inputUrl, setInputUrl] = useState(esp32Url);
   const [isConnecting, setIsConnecting] = useState(false);
   const [buttonScale] = useState(new Animated.Value(1));
-  const systemColorScheme = useColorScheme();
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-  const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  const { theme, toggleTheme } = useThemeCustom();
 
   const animateButton = () => {
     Animated.sequence([
@@ -65,8 +63,7 @@ export default function HomeScreen() {
       console.log('Testando conexão:', testUrl);
       
       const response = await fetch(testUrl, { 
-        method: 'GET',
-        timeout: 10000
+        method: 'GET'
       });
       
       console.log('Resposta recebida:', response.status, response.statusText);

@@ -6,6 +6,7 @@ import { IconSymbol } from './ui/icon-symbol';
 import { useESP32 } from '@/contexts/ESP32Context';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
+import { Platform } from 'react-native';
 
 interface CameraCaptureProps {
   onPhotoCaptured?: (photoUri: string) => void;
@@ -23,52 +24,60 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
 
     try {
       setIsCapturing(true);
-      
       // Fazer requisição para capturar foto
       const response = await fetch(captureUrl);
-      
       if (!response.ok) {
         throw new Error(`Erro HTTP: ${response.status}`);
       }
-
       // Converter resposta para blob
       const blob = await response.blob();
-      
-      // Criar URI local para a imagem
       const fileName = `esp32_capture_${Date.now()}.jpg`;
-      const fileUri = `${FileSystem.documentDirectory}${fileName}`;
-      
-      // Converter blob para base64 e salvar
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const base64 = reader.result as string;
-          const base64Data = base64.split(',')[1]; // Remover prefixo data:image/jpeg;base64,
-          
-          await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
 
-          // Solicitar permissão para salvar na galeria
-          const { status } = await MediaLibrary.requestPermissionsAsync();
-          if (status === 'granted') {
-            await MediaLibrary.saveToLibraryAsync(fileUri);
-            Alert.alert('Sucesso', 'Foto capturada e salva na galeria!');
-          } else {
-            Alert.alert('Aviso', 'Foto capturada, mas não foi possível salvar na galeria');
-          }
-
-          if (onPhotoCaptured) {
-            onPhotoCaptured(fileUri);
-          }
-        } catch (error) {
-          console.error('Erro ao processar foto:', error);
-          Alert.alert('Erro', 'Erro ao processar a foto capturada');
+      if (Platform.OS === 'web') {
+        // Web: criar link de download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 100);
+        Alert.alert('Sucesso', 'Foto capturada e baixada!');
+        if (onPhotoCaptured) {
+          onPhotoCaptured(url);
         }
-      };
-      
-      reader.readAsDataURL(blob);
-      
+      } else {
+        // Mobile: salvar no sistema de arquivos e galeria
+        const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+        // Converter blob para base64 e salvar
+        const reader = new FileReader();
+        reader.onload = async () => {
+          try {
+            const base64 = reader.result as string;
+            const base64Data = base64.split(',')[1];
+            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status === 'granted') {
+              await MediaLibrary.saveToLibraryAsync(fileUri);
+              Alert.alert('Sucesso', 'Foto capturada e salva na galeria!');
+            } else {
+              Alert.alert('Aviso', 'Foto capturada, mas não foi possível salvar na galeria');
+            }
+            if (onPhotoCaptured) {
+              onPhotoCaptured(fileUri);
+            }
+          } catch (error) {
+            console.error('Erro ao processar foto:', error);
+            Alert.alert('Erro', 'Erro ao processar a foto capturada');
+          }
+        };
+        reader.readAsDataURL(blob);
+      }
     } catch (error) {
       console.error('Erro ao capturar foto:', error);
       Alert.alert('Erro', 'Não foi possível capturar a foto. Verifique a conexão.');
