@@ -15,7 +15,11 @@ export default function ExploreScreen() {
   const themeColors = Colors[theme];
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: themeColors.background }]} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: themeColors.background }]}
+      contentContainerStyle={{ paddingBottom: 32, paddingHorizontal: 0 }}
+      showsVerticalScrollIndicator={false}
+    >
       <ThemedView style={[styles.headerMinimal, { backgroundColor: theme === 'dark' ? '#23272b' : '#fff', borderColor: theme === 'dark' ? '#23272b' : '#fff' }] }>
         <ThemedText type="title" style={[styles.titleMinimal, { color: themeColors.text }] }>
           Controles da Câmera
@@ -25,7 +29,17 @@ export default function ExploreScreen() {
         </ThemedText>
       </ThemedView>
 
-      <ThemedView style={[styles.cardMinimal, { backgroundColor: theme === 'dark' ? '#23272b' : '#fff', borderColor: theme === 'dark' ? '#23272b' : '#fff' }] }>
+      <ThemedView style={[
+        styles.cardMinimal,
+        {
+          backgroundColor: theme === 'dark' ? '#23272b' : '#fff',
+          borderColor: theme === 'dark' ? '#23272b' : '#fff',
+          width: '100%',
+          marginHorizontal: 0,
+          paddingHorizontal: 0,
+          alignSelf: 'stretch',
+        }
+      ]}>
         {!isConnected ? (
           <>
             <IconSymbol name="camera.fill" size={64} color={theme === 'dark' ? '#444' : '#ccc'} />
@@ -37,7 +51,7 @@ export default function ExploreScreen() {
           <CameraControls />
         )}
       </ThemedView>
-    </ScrollView>
+  </ScrollView>
   );
 }
 
@@ -45,6 +59,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',
+    paddingHorizontal: 0,
   },
   headerMinimal: {
     padding: 20,
@@ -70,8 +85,9 @@ const styles = StyleSheet.create({
   cardMinimal: {
     backgroundColor: '#fff',
     borderRadius: 18,
-    padding: 20,
-    marginHorizontal: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 0,
+    marginHorizontal: 0,
     marginBottom: 20,
     shadowColor: '#000',
     shadowOpacity: 0.04,
@@ -79,6 +95,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
     alignItems: 'center',
+    width: '100%',
+    alignSelf: 'stretch',
   },
   disconnectedText: {
     fontSize: 16,

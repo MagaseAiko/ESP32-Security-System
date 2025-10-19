@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, Alert, ScrollView, Platform, Dimensions } from 'react-native';
+import Slider from '@react-native-community/slider';
 import { useThemeCustom } from '@/contexts/ThemeContext';
 import { ThemedView } from './themed-view';
 import { ThemedText } from './themed-text';
@@ -86,13 +87,15 @@ export function CameraControls({ onSettingsChange }: CameraControlsProps) {
     }
   }, [isConnected]);
 
-  const ControlSlider = ({ 
-    title, 
-    variable, 
-    value, 
-    min, 
-    max, 
-    step = 1 
+  const screenWidth = Dimensions.get('window').width;
+
+  const ControlSlider = ({
+    title,
+    variable,
+    value,
+    min,
+    max,
+    step = 1
   }: {
     title: string;
     variable: keyof CameraSettings;
@@ -101,25 +104,22 @@ export function CameraControls({ onSettingsChange }: CameraControlsProps) {
     max: number;
     step?: number;
   }) => (
-    <View style={styles.controlItemMinimal}>
-      <ThemedText style={[styles.controlLabelMinimal, { color: theme === 'dark' ? '#ECEDEE' : '#222' }]}>{title}: <ThemedText style={{fontWeight:'bold'}}>{value}</ThemedText></ThemedText>
-      <View style={styles.sliderContainerMinimal}>
-        {Array.from({ length: Math.floor((max - min) / step) + 1 }, (_, i) => {
-          const sliderValue = min + (i * step);
-          const isActive = value === sliderValue;
-          return (
-            <TouchableOpacity
-              key={sliderValue}
-              style={[styles.sliderButtonMinimal, 
-                isActive && (theme === 'dark' ? styles.sliderButtonActiveDark : styles.sliderButtonActiveLight)
-              ]}
-              onPress={() => applySetting(variable, sliderValue)}
-              activeOpacity={0.8}
-              accessibilityLabel={`Ajustar ${title} para ${sliderValue}`}
-            />
-          );
-        })}
+  <View style={[styles.controlItemModern, { width: screenWidth - 32, maxWidth: 700, alignSelf: 'center' }] }>
+      <View style={styles.labelRowModern}>
+        <ThemedText style={[styles.controlLabelModern, { color: theme === 'dark' ? '#ECEDEE' : '#222' }]}>{title}</ThemedText>
+        <ThemedText style={styles.valueModern}>{value}</ThemedText>
       </View>
+      <Slider
+        style={[styles.sliderModern, { width: screenWidth - 48, maxWidth: 680, alignSelf: 'center' }]}
+        minimumValue={min}
+        maximumValue={max}
+        step={step}
+        value={value}
+        minimumTrackTintColor={theme === 'dark' ? '#2d7cf7' : '#007AFF'}
+        maximumTrackTintColor={theme === 'dark' ? '#444' : '#ccc'}
+        thumbTintColor={theme === 'dark' ? '#2d7cf7' : '#007AFF'}
+        onSlidingComplete={val => applySetting(variable, Math.round(val))}
+      />
     </View>
   );
 
@@ -128,104 +128,63 @@ export function CameraControls({ onSettingsChange }: CameraControlsProps) {
   }
 
   return (
-    <ThemedView style={[styles.containerMinimal, { backgroundColor: theme === 'dark' ? '#23272b' : '#fff', borderColor: theme === 'dark' ? '#23272b' : '#fff', borderRadius: 18, padding: 20, marginHorizontal: 0, marginBottom: 0, elevation: 0 }] }>
-      <ScrollView style={styles.scrollViewMinimal} showsVerticalScrollIndicator={false}>
-        <ControlSlider
-          title="Qualidade"
-          variable="quality"
-          value={settings.quality}
-          min={4}
-          max={63}
-        />
-        <ControlSlider
-          title="Brilho"
-          variable="brightness"
-          value={settings.brightness}
-          min={-2}
-          max={2}
-        />
-        <ControlSlider
-          title="Contraste"
-          variable="contrast"
-          value={settings.contrast}
-          min={-2}
-          max={2}
-        />
-        <ControlSlider
-          title="Saturação"
-          variable="saturation"
-          value={settings.saturation}
-          min={-2}
-          max={2}
-        />
-        <ControlSlider
-          title="Resolução"
-          variable="framesize"
-          value={settings.framesize}
-          min={0}
-          max={13}
-        />
-        <ControlSlider
-          title="LED"
-          variable="led_intensity"
-          value={settings.led_intensity}
-          min={0}
-          max={255}
-          step={25}
-        />
+    <ThemedView style={[styles.containerModern, { backgroundColor: theme === 'dark' ? '#23272b' : '#fff', borderColor: theme === 'dark' ? '#23272b' : '#fff', borderRadius: 18, padding: 16, marginHorizontal: 0, marginBottom: 0, elevation: 0 }] }>
+      <ScrollView style={styles.scrollViewModern} contentContainerStyle={{ paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+        <ControlSlider title="Qualidade" variable="quality" value={settings.quality} min={4} max={63} />
+        <ControlSlider title="Brilho" variable="brightness" value={settings.brightness} min={-2} max={2} />
+        <ControlSlider title="Contraste" variable="contrast" value={settings.contrast} min={-2} max={2} />
+        <ControlSlider title="Saturação" variable="saturation" value={settings.saturation} min={-2} max={2} />
+        <ControlSlider title="Resolução" variable="framesize" value={settings.framesize} min={0} max={13} />
+        <ControlSlider title="LED" variable="led_intensity" value={settings.led_intensity} min={0} max={255} step={25} />
       </ScrollView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  containerMinimal: {
+  containerModern: {
     flex: 1,
     backgroundColor: 'transparent',
     padding: 0,
     margin: 0,
+    borderRadius: 18,
   },
-  scrollViewMinimal: {
+  scrollViewModern: {
     flex: 1,
     backgroundColor: 'transparent',
+    paddingHorizontal: 0,
   },
-  controlItemMinimal: {
-    marginBottom: 22,
+  controlItemModern: {
+    marginBottom: 28,
+    paddingHorizontal: 16,
     alignItems: 'stretch',
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
   },
-  controlLabelMinimal: {
-    fontSize: 15,
-    marginBottom: 8,
-    fontWeight: '500',
-    letterSpacing: 0.1,
-  },
-  sliderContainerMinimal: {
+  labelRowModern: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    gap: 4,
+    marginBottom: 4,
   },
-  sliderButtonMinimal: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#e5e7eb',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    marginHorizontal: 1,
-    ...Platform.select({
-      web: { cursor: 'pointer' },
-    }),
-    transitionProperty: 'background-color, border-color',
-    transitionDuration: '120ms',
+  controlLabelModern: {
+    fontSize: 16,
+    fontWeight: '500',
+    letterSpacing: 0.1,
   },
-  sliderButtonActiveLight: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+  valueModern: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#007AFF',
+    marginLeft: 8,
   },
-  sliderButtonActiveDark: {
-    backgroundColor: '#2d7cf7',
-    borderColor: '#2d7cf7',
+  sliderModern: {
+    width: '100%',
+    minWidth: 180,
+    maxWidth: '100%',
+    height: 36,
+    marginTop: 2,
+    alignSelf: 'stretch',
   },
 });
