@@ -20,7 +20,9 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.magaseaiko.ESP32CAM"
+      "package": "com.magaseaiko.ESP32CAM",
+      "permissions": ["INTERNET", "ACCESS_NETWORK_STATE"],
+      "usesCleartextTraffic": true
     },
     "web": {
       "output": "static",

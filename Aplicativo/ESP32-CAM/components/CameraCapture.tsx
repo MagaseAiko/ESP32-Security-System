@@ -6,7 +6,7 @@ import { IconSymbol } from './ui/icon-symbol';
 import { useESP32 } from '@/contexts/ESP32Context';
 import { useThemeCustom } from '@/contexts/ThemeContext';
 import * as MediaLibrary from 'expo-media-library';
-import * as FileSystem from 'expo-file-system';
+import { File as FSFile, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 
 interface CameraCaptureProps {
@@ -51,17 +51,17 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
           onPhotoCaptured(url);
         }
       } else {
-        // Mobile: salvar no sistema de arquivos e galeria
-        const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+        // Mobile: salvar no sistema de arquivos e galeria (Expo FileSystem v3 API)
+        const baseDir = Paths.document ?? Paths.cache; // Directory
+        const file = new FSFile(baseDir, fileName);
         // Converter blob para base64 e salvar
         const reader = new FileReader();
         reader.onload = async () => {
           try {
             const base64 = reader.result as string;
             const base64Data = base64.split(',')[1];
-            await FileSystem.writeAsStringAsync(fileUri, base64Data, {
-              encoding: FileSystem.EncodingType.Base64,
-            });
+            file.write(base64Data, { encoding: 'base64' });
+            const fileUri = file.uri;
             const { status } = await MediaLibrary.requestPermissionsAsync();
             if (status === 'granted') {
               await MediaLibrary.saveToLibraryAsync(fileUri);
@@ -70,7 +70,7 @@ export function CameraCapture({ onPhotoCaptured }: CameraCaptureProps) {
               Alert.alert('Aviso', 'Foto capturada, mas não foi possível salvar na galeria');
             }
             if (onPhotoCaptured) {
-              onPhotoCaptured(fileUri);
+              onPhotoCaptured(file.uri);
             }
           } catch (error) {
             console.error('Erro ao processar foto:', error);
