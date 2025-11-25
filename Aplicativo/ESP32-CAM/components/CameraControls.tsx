@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert, ScrollView, Platform, Dimensions } from 'react-native';
+import { View, StyleSheet, Alert, ScrollView, Platform, Dimensions, TouchableOpacity } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useThemeCustom } from '@/contexts/ThemeContext';
 import { ThemedView } from './themed-view';
@@ -20,7 +20,7 @@ interface CameraControlsProps {
 }
 
 export function CameraControls({ onSettingsChange }: CameraControlsProps) {
-  const { controlUrl, statusUrl, isConnected } = useESP32();
+  const { controlUrl, statusUrl, isConnected, baseUrl, isNgrokUrl } = useESP32();
   const { theme } = useThemeCustom();
   const [settings, setSettings] = useState<CameraSettings>({
     quality: 10,
@@ -31,6 +31,7 @@ export function CameraControls({ onSettingsChange }: CameraControlsProps) {
     led_intensity: 0,
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Carregar configurações atuais da câmera
   const loadCurrentSettings = async () => {
@@ -78,6 +79,56 @@ export function CameraControls({ onSettingsChange }: CameraControlsProps) {
       console.error(`Erro ao aplicar ${variable}:`, error);
       Alert.alert('Erro', `Não foi possível alterar ${variable}`);
     }
+  };
+
+  // Resetar WiFi do ESP32
+  const handleResetWiFi = async () => {
+    Alert.alert(
+      'Resetar WiFi',
+      'Tem certeza que deseja resetar as configurações de WiFi do ESP32? O dispositivo será reiniciado.',
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Resetar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsResetting(true);
+              const resetUrl = isNgrokUrl 
+                ? `https://${baseUrl}/reset`
+                : `http://${baseUrl}/reset`;
+              
+              const response = await fetch(resetUrl, {
+                method: 'GET',
+                headers: {
+                  'Accept': 'application/json',
+                },
+              });
+
+              if (response.ok) {
+                Alert.alert(
+                  'Sucesso',
+                  'WiFi resetado com sucesso! O ESP32 será reiniciado e entrará em modo de configuração.'
+                );
+              } else {
+                throw new Error(`Erro HTTP: ${response.status}`);
+              }
+            } catch (error) {
+              console.error('Erro ao resetar WiFi:', error);
+              Alert.alert(
+                'Erro',
+                'Não foi possível resetar o WiFi. Verifique a conexão com o ESP32.'
+              );
+            } finally {
+              setIsResetting(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   // Carregar configurações quando conectado
@@ -136,6 +187,26 @@ export function CameraControls({ onSettingsChange }: CameraControlsProps) {
         <ControlSlider title="Saturação" variable="saturation" value={settings.saturation} min={-2} max={2} />
         <ControlSlider title="Resolução" variable="framesize" value={settings.framesize} min={0} max={13} />
         <ControlSlider title="LED" variable="led_intensity" value={settings.led_intensity} min={0} max={255} step={25} />
+        
+        {/* Botão de Reset WiFi */}
+        <View style={[styles.resetButtonContainer, { width: screenWidth - 32, maxWidth: 700, alignSelf: 'center' }]}>
+          <TouchableOpacity
+            style={[
+              styles.resetButton,
+              { 
+                backgroundColor: theme === 'dark' ? '#dc3545' : '#ff3b30',
+                opacity: isResetting ? 0.5 : 1,
+              }
+            ]}
+            onPress={handleResetWiFi}
+            disabled={isResetting}
+            activeOpacity={0.7}
+          >
+            <ThemedText style={styles.resetButtonText}>
+              {isResetting ? 'Resetando...' : '🔄 Resetar WiFi'}
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </ThemedView>
   );
@@ -186,5 +257,32 @@ const styles = StyleSheet.create({
     height: 36,
     marginTop: 2,
     alignSelf: 'stretch',
+  },
+  resetButtonContainer: {
+    marginTop: 16,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
+  },
+  resetButton: {
+    backgroundColor: '#ff3b30',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  resetButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
 });
