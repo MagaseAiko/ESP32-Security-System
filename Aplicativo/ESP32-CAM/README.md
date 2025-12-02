@@ -170,5 +170,3 @@ ESP32-CAM/
 - URLs do Ngrok gratuito mudam a cada reinicialização — salve a URL atual se precisar usá-la com frequência.
 - Para produção, considere usar um domínio ou servidor reverso persistente em vez do Ngrok gratuito.
 - Se quiser suportar autenticação ou endpoints adicionais, atualize `ESP32Context.tsx` e `CameraControls.tsx` para incluir novos parâmetros e lógica.
-
-Se quiser que eu atualize ou complemente qualquer parte do README com screenshots, exemplos de payloads JSON ou um guia detalhado para configurar o firmware do ESP32, me diga e eu adiciono.
